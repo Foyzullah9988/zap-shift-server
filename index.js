@@ -82,7 +82,7 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
-        
+
         const db = client.db('zap_shift_db')
         const parcelCollection = db.collection('parcels');
         const paymentCollection = db.collection('payment');
@@ -286,7 +286,7 @@ async function run() {
             }
             if (deliveryStatus) {
                 // query.deliveryStatus = {$in:['rider_assigned','rider_arriving']}
-                query.deliveryStatus = {$nin:['parcel_delivered']}
+                query.deliveryStatus = { $nin: ['parcel_delivered'] }
             }
 
             const cursor = parcelCollection.find(query)
@@ -329,15 +329,27 @@ async function run() {
             res.send(riderResult)
         })
 
-        app.patch('/parcels/:id/status',async(req,res)=>{
-            const {deliveryStatus}=req.body;
-            const query={_id:new ObjectId(req.params.id)};
-            const updateDoc={
-                $set:{
-                    deliveryStatus:deliveryStatus
+        app.patch('/parcels/:id/status', async (req, res) => {
+            const { deliveryStatus, riderId } = req.body;
+            const query = { _id: new ObjectId(req.params.id) };
+            const updateDoc = {
+                $set: {
+                    deliveryStatus: deliveryStatus
                 }
             }
-            const result = await parcelCollection.updateOne(query,updateDoc)
+
+            if (deliveryStatus === 'parcel_delivered') {
+                const riderQuery = { _id: new ObjectId(riderId) };
+                const riderUpdateDoc = {
+                    $set: {
+                        deliveryStatus: 'available'
+                    }
+                }
+                const result = await ridersCollection.updateOne(riderQuery, riderUpdateDoc)
+                res.send(result)
+            }
+            
+            const result = await parcelCollection.updateOne(query, updateDoc)
             res.send(result)
         })
 
